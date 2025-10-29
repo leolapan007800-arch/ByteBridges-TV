@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ByteBridges TV - Live Channels</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script> 
+
+    <style>
+        /* UI/UX Themes: Ocean Blue & White */
+        :root {
+            --primary-color: #0077b6; /* Ocean Blue */
+            --secondary-color: #ffffff; /* White */
+            --text-color: #333333;
+            --light-blue: #00b4d8;
+            --error-color: #cc0000;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: var(--text-color);
+        }
+
+        /* Header / App Name */
+        .header {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        /* Main Layout */
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 10px;
+        }
+
+        /* Video Player Area */
+        .video-player-area {
+            flex: 3;
+            margin-right: 20px;
+            background-color: #000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #000;
+        }
+
+        /* Error Message Display */
+        #error-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: var(--error-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            text-align: center;
+            z-index: 10;
+            display: none;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        /* Channel List Sidebar */
+        .channel-sidebar {
+            flex: 1;
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            min-width: 250px;
+        }
+
+        .channel-sidebar h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--light-blue);
+            padding-bottom: 10px;
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+
+        .channel-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .channel-list li {
+            margin-bottom: 8px;
+        }
+
+        .channel-list button {
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            background-color: #f0f8ff;
+            color: var(--primary-color);
+            text-align: left;
+            font-size: 1.0em;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .channel-list button:hover,
+        .channel-list button.active {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+        }
+
+        /* Channel Categories */
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 5px;
+        }
+
+        .category-tabs button {
+            padding: 8px 15px;
+            border: 1px solid var(--light-blue);
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .category-tabs button.active {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            border-color: var(--primary-color);
+        }
+
+        /* Responsive Design (Phone View) */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                margin: 0;
+                padding: 10px;
+            }
+
+            .video-player-area {
+                margin-right: 0;
+                margin-bottom: 15px;
+                order: 1;
+            }
+
+            .channel-sidebar {
+                order: 2;
+                min-width: unset;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>ByteBridges TV</h1>
+    </header>
+
+    <main class="container">
+        
+        <section class="video-player-area">
+            <div class="video-container">
+                <video id="video" controls autoplay muted playsinline crossorigin="anonymous"></video>
+                <div id="error-message">
+                    ⚠️ Live Stream ချိတ်ဆက်၍ မရပါ (Network Error/CORS ပြဿနာ)
+                </div>
+            </div>
+            <h3 id="current-channel-name" style="color: var(--secondary-color); padding: 10px; background-color: var(--primary-color); margin: 0; text-align: center;">MRTV 4</h3>
+        </section>
+
+        <aside class="channel-sidebar">
+            <h2>📺 Live Channel Categories</h2>
+            
+            <div class="category-tabs">
+                <button class="category-button active" data-category="general">General</button>
+                <button class="category-button" data-category="movies">Movies</button>
+                <button class="category-button" data-category="sports">Sports</button>
+                <button class="category-button" data-category="news">News</button>
+                <button class="category-button" data-category="kids">Kids</button>
+            </div>
+
+            <ul class="channel-list">
+                </ul>
+        </aside>
+
+    </main>
+
+    <script>
+        
+        const allChannels = {
+            general: [
+                { name: "Channel 7 HD", api: "https://pplive.comquas.com:5443/LiveApp/streams/CLcBFN71NkF61709008601656.m3u8" },
+                { name: "Channel 7 (Demo)", api: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }, // စမ်းသပ်ဖို့ Demo Stream
+            ],
+            movies: [
+                { name: "Movie Channel A (Dummy)", api: "dummy-url/m-a.m3u8" },
+                { name: "Movie Channel B (Dummy)", api: "dummy-url/m-b.m3u8" },
+            ],
+            sports: [
+                { name: "Sports 1 (Dummy)", api: "dummy-url/s-1.m3u8" },
+            ],
+            news: [
+                { name: "News Today (Dummy)", api: "dummy-url/n-t.m3u8" },
+            ],
+            kids: [
+                { name: "Kids Zone (Dummy)", api: "dummy-url/k-z.m3u8" },
+            ]
+        };
+
+        let hls;
+        const video = document.getElementById('video');
+        const channelListUl = document.querySelector('.channel-list');
+        const categoryButtons = document.querySelectorAll('.category-button');
+        const currentChannelNameElement = document.getElementById('current-channel-name');
+        const errorMessageElement = document.getElementById('error-message');
+
+        
+        /**
+         * Error Message ပြသခြင်း/ဖျောက်ခြင်း
+         */
+        function displayError(show, message = "") {
+            errorMessageElement.style.display = show ? 'flex' : 'none';
+            if (message) {
+                 errorMessageElement.innerHTML = `⚠️ ${message}`;
+            } else {
+                 errorMessageElement.innerHTML = `⚠️ Live Stream ချိတ်ဆက်၍ မရပါ (Network/CORS ပြဿနာ ဖြစ်နိုင်ပါသည်)`;
+            }
+        }
+
+        /**
+         * HLS Stream ကို Video Player မှာ ကစားခြင်း
+         */
+        function playHlsStream(url, name) {
+            displayError(false); 
+
+            if (hls) {
+                hls.destroy(); 
+                hls = null;
+            }
+            
+            currentChannelNameElement.textContent = name;
+            
+            // 💡 Autoplay ရဖို့အတွက် မဖြစ်မနေ Muted လုပ်ရပါမယ်
+            video.muted = true; 
+
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    debug: true, // Console မှာ HLS logs တွေ ပြပေးပါမယ်
+                });
+                
+                // Event Listeners for HLS.js errors
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    const errorType = data.type;
+                    const errorDetails = data.details;
+                    const errorFatal = data.fatal;
+
+                    console.error(`HLS Error: Type=${errorType}, Details=${errorDetails}, Fatal=${errorFatal}`);
+                    
+                    if (errorFatal) {
+                         displayError(true, `Stream Error: ${errorDetails}. ပြန်လည်စတင်ရန် ကြိုးစားပါ။`);
+                         if (errorType === Hls.ErrorTypes.NETWORK_ERROR) {
+                             setTimeout(() => {
+                                 console.log("Attempting to re-load stream...");
+                                 playHlsStream(url, name); 
+                             }, 5000); 
+                         } else {
+                            hls.destroy();
+                            hls = null;
+                         }
+                    }
+                });
+
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => {
+                        console.warn("Autoplay was prevented by browser. User must click play.", e);
+                        // Autoplay အဆင်မပြေရင် user ကို manual နှိပ်ခိုင်းရန်
+                    });
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Safari လို native support ပေးတဲ့ browser တွေအတွက်
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => console.warn("Autoplay was prevented (Native):", e));
+                });
+            } else {
+                displayError(true, 'သင့်ရဲ့ Browser က HLS Live Stream ကို Support မပေးနိုင်ပါ');
+            }
+
+            // Active button ကို ပြောင်းလဲခြင်း
+            document.querySelectorAll('.channel-list button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeButton = document.querySelector(`button[data-api="${url}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        }
+
+        /**
+         * Category အလိုက် Channel စာရင်းကို ပြသခြင်း
+         */
+        function renderChannelList(category) {
+            channelListUl.innerHTML = '';
+            const channels = allChannels[category] || [];
+
+            channels.forEach(channel => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = channel.name;
+                button.setAttribute('data-api', channel.api);
+                button.onclick = () => {
+                    playHlsStream(channel.api, channel.name);
+                };
+                li.appendChild(button);
+                channelListUl.appendChild(li);
+            });
+        }
+
+        /**
+         * Category Tab များကို စီမံခန့်ခွဲခြင်း
+         */
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                
+                categoryButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                renderChannelList(category);
+                
+                // Category ပြောင်းတဲ့အခါ ပထမဆုံး Channel ကို ကစားပေးဖို့
+                const firstChannel = allChannels[category][0];
+                if (firstChannel) {
+                    playHlsStream(firstChannel.api, firstChannel.name);
+                }
+            });
+        });
+
+        // စာမျက်နှာ စတင်ဖွင့်သည့်အခါ (Initialization)
+        document.addEventListener('DOMContentLoaded', () => {
+            // ပထမဆုံး Category ကို ပြသပြီး
+            renderChannelList('general');
+            
+            // ပထမဆုံး Channel ကို ကစားခြင်း
+            const firstChannel = allChannels.general[0];
+            if (firstChannel) {
+                playHlsStream(firstChannel.api, firstChannel.name);
+            }
+        });
+
+    </script>
+</body>
+</html>
